@@ -15,7 +15,7 @@ try:
   from xml.etree.ElementTree import ElementTree
 except:
   prettyprint('''
-        Welcome to the ModeShape Release Script.
+        Welcome to the ModeShape Internal Release Script.
         This release script requires that you use at least Python 2.5.0.  It appears
         that you do not thave the ElementTree XML APIs available, which are available
         by default in Python 2.5.0.
@@ -44,28 +44,24 @@ def help_and_exit():
     
 %s  ModeShape Release Script%s
 
-    This script automates much of the work of releasing a new version of the ModeShape project, and includes 
-    the following tasks: 
+    This script automates the process of cutting an internal release of ModeShape. An internal release
+    is simply a release that is not published into the Maven repository or to our downloads page,
+    but is merely tagged with the desired version. This script performs these tasks:
       - create a local branch for the new release; 
       - change the project-related versions in the POM files and documentation; 
       - commit those changes locally;
       - create a tag for the release;
-      - generate the release notes in multiple formats;
-      - generate emails to all the people who have filed, commented on, or worked on issues 
-        fixed in this release;
       - run a full assembly build of the software to product all artifacts and documentation;
       - place a copy of all artifacts and documentation in the '../archive' folder;
-      - push the commit and tag to the official Git repository (authorization required);
-      - deploy all artifacts to the JBoss.org Maven repository in a staging area (authorization required); and
-      - upload all artifacts and documentation to JBoss.org (authorization required)
+      - push the commit and tag to the official Git repository (authorization required)
     
-    Note that the last three steps are not performed during a dry run.
+    Note that the last step is not performed during a dry run.
     
     Before this script is executed, be sure to update and commit the 'release_notes.md' file. It also ensures 
     that the local Git repository is a writable clone of the official ModeShape repository on GitHub.
 
 %s  Usage:%s
-        $ bin/release.py [options] <version> [<branch>]
+        $ bin/release-internal.py [options] <version> [<branch>]
     where:
       <version>           The name of the new version (e.g., '2.4.0.Final' but without quotes), which must 
                           comply with the format '<major>.<minor>.<patch>.<qualifier>', where the qualifier 
@@ -85,10 +81,10 @@ def help_and_exit():
             
 %s  Examples:%s
     
-    $ bin/release.py 3.0.0.Final
+    $ bin/release-internal.py 3.0.0.Final
          This will release '3.0.0.Final' based off of 'master'
     
-    $ bin/release.py 2.8.1.Final 2.x
+    $ bin/release-internal.py 2.8.1.Final 2.x
          This will release '2.8.1.Final' based off of the existing '2.x' branch
     
 ''' % (Colors.yellow(), Colors.end_color(), Colors.yellow(), Colors.end_color(), Colors.yellow(), Colors.end_color()), Levels.INFO)
@@ -345,7 +341,7 @@ def release():
     sys.exit(1)
 
   prettyprint("", Levels.INFO)
-  prettyprint("Releasing ModeShape version %s from branch '%s'" % (version, branch), Levels.INFO)
+  prettyprint("Releasing ModeShape version %s from branch '%s' as an INTERNAL release." % (version, branch), Levels.INFO)
   sure = input_with_default("Are you sure you want to continue?", "N")
   if not sure.upper().startswith("Y"):
     prettyprint("... User Abort!", Levels.WARNING)
@@ -399,43 +395,45 @@ def release():
   copy_release_notes_to_archive_location(archive_path,version);
   prettyprint("Step 5: Complete", Levels.INFO)
 
-  # Step 6: Generate contribution emails 
-  prettyprint("Step 6: Generating contribution emails using JIRA and placing in '%s'" % (archive_path), Levels.INFO)
-  generate_contribution_emails(archive_path,'rhauch@redhat.com')
-  prettyprint("Step 6: Complete", Levels.INFO)
+  ## Step 6: Generate contribution emails 
+  #prettyprint("Step 6: Generating contribution emails using JIRA and placing in '%s'" % (archive_path), Levels.INFO)
+  #generate_contribution_emails(archive_path,'rhauch@redhat.com')
+  #prettyprint("Step 6: Complete", Levels.INFO)
 
   # Nothing else should modify any files locally ...
     
   ## Clean up in git
-  prettyprint("Step 7: Committing changes to Git, creating release tag, and pushing to 'origin'", Levels.INFO)
+  prettyprint("Step 6: Committing changes to Git, creating release tag, and pushing to 'origin'", Levels.INFO)
   git.tag_for_release()
   if not settings['dry_run']:
     git.push_to_origin()
     git.cleanup()
   else:
     prettyprint("In dry-run mode.  Not pushing tag to remote origin and not removing temp release branch '%s'." % git.working_branch, Levels.DEBUG)
-  prettyprint("Step 7: Complete", Levels.INFO)
+  prettyprint("Step 6: Complete", Levels.INFO)
 
-  async_processes = []
-
-  # Step 8: Upload javadocs to JBoss.org
-  prettyprint("Step 8: Uploading documentation to JBoss.org", Levels.INFO)
-  do_task(upload_documentation, [base_dir, version], async_processes)
-  prettyprint("Step 8: Complete", Levels.INFO)
-  
-  # Step 9: Upload downloads to JBoss.org
-  prettyprint("Step 9: Uploading downloads to JBoss.org", Levels.INFO)
-  do_task(upload_artifacts, [base_dir, version], async_processes)    
-  prettyprint("Step 9: Complete", Levels.INFO)
-  
+  # Internal releases do none of the following ...
+  #
+  # async_processes = []
+  #
+  ## Step 8: Upload javadocs to JBoss.org
+  #prettyprint("Step 8: Uploading documentation to JBoss.org", Levels.INFO)
+  #do_task(upload_documentation, [base_dir, version], async_processes)
+  #prettyprint("Step 8: Complete", Levels.INFO)
+  #
+  ## Step 9: Upload downloads to JBoss.org
+  #prettyprint("Step 9: Uploading downloads to JBoss.org", Levels.INFO)
+  #do_task(upload_artifacts, [base_dir, version], async_processes)    
+  #prettyprint("Step 9: Complete", Levels.INFO)
+  #
   ## Wait for processes to finish
-  for p in async_processes:
-    p.start()
+  #for p in async_processes:
+  #  p.start()
+  #
+  #for p in async_processes:
+  #  p.join()
   
-  for p in async_processes:
-    p.join()
-  
-  prettyprint("\n\n\nDone!  Now all you need to do is the remaining post-release tasks as outlined in https://docspace.corp.redhat.com/docs/DOC-28594", Levels.INFO)
+  prettyprint("\n\n\nDone with the internal release!", Levels.INFO)
 
 if __name__ == "__main__":
   release()
